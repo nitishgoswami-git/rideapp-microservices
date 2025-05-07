@@ -66,8 +66,10 @@ const captainSchema = new mongoose.Schema({
         lng: {
             type: Number,
         }
+    },refreshToken : {
+        type: String
     }
-})
+},{timestamps: true})
 
 
 
