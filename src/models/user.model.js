@@ -24,7 +24,7 @@ const userSchema = mongoose.Schema(
     password: {
         type: String,
         required: true,
-        select: false,
+        // select: false,
     },
     refreshToken : {
         type: String
@@ -44,12 +44,13 @@ userSchema.methods.isPasswordCorrect = async function (password) {
     return await bcrypt.compare(password, this.password);
 }
 
-userSchema.methods.generateAccessToken = async function(){
+userSchema.methods.generateAccessToken =  function(){
     return jwt.sign(
         {
             _id : this._id,
             email : this.email,
-            fullname : this.fullname
+            firstname : this.fullname?.firstname,
+            lastname: this.fullname?.lastname
         },
         process.env.ACCESS_TOKEN_SECRET,
         {
