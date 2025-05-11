@@ -2,7 +2,7 @@ import { validationResult } from 'express-validator';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { sendMessageToSocketId } from '../socket/index.js';
+import { sendMessageToSocketId } from '../socket.js';
 import { getAddressCoordinate, getCaptainsInTheRadius } from '../services/maps.service.js';
 import * as rideService from '../services/ride.service.js';
 import { Ride } from '../models/ride.model.js';

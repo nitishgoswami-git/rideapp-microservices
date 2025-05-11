@@ -1,4 +1,5 @@
-import { verifyCaptain, verifyUser } from "../middlewares/auth.middleware"
+import { verifyCaptain, verifyUser } from "../middlewares/auth.middleware.js"
+import { body, query } from 'express-validator';
 import { Router } from "express";
 import { createRide,
     getFare,
@@ -6,7 +7,7 @@ import { createRide,
     startRide,
     endRide} from "../controllers/rides.controller.js"
 
-router = Router()
+const router = Router();
 
 router.post('/create',
     verifyUser,
