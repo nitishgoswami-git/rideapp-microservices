@@ -75,6 +75,7 @@ const LoginUser = asyncHandler( async (req,res) => {
     // check if password is correct
     // generate token
     // return res.
+    console.log("user_services route hit")
     const { email, password } = req.body;
     
     if([email,password].some((field) => field?.trim() === "")){
