@@ -1,56 +1,64 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
-import { User } from "../models/user.model.js"
-import { Captain } from "../models/captain.model.js";
+
 
 export const verifyUser = asyncHandler(async(req, _ ,next) =>{
-   try {
-    const token = req.cookies?.AccessToken || req.header("Authorization")?.replace("Bearer ","")   
- 
-    if(!token){
-     throw new ApiError(401,"Unauthorized Request")
+  try {
+    const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
     }
- 
-   const decodedToken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
- 
-   const user = await User.findById(decodedToken?._id).select("-password -refreshToken")
-   
-   if(!user){
-     
-     throw new ApiError(401, "Invalid Access Token")
-   }
- 
-   req.user = user;
-   next()
-   } catch (error) {
-    throw new ApiError(401,error?.message || "Invalid Access Token")
-    
-   }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
+    const response = await axios.get(`${process.env.BASE_URL}/user/profile`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    })
+
+    const user = response.data;
+
+    if (!user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    req.user = user;
+
+    next();
+
+}
+catch (error) {
+    res.status(500).json({ message: error.message });
+}
 })
 
 export const verifyCaptain = asyncHandler( async(req,_,next) =>{
   try {
-    const token = req.cookies?.AccessToken || req.header("Authorization")?.replace("Bearer ","")   
- 
-    if(!token){
-     throw new ApiError(401,"Unauthorized Request")
+    const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
+    if (!token) {
+        return res.status(401).json({ message: 'Unauthorized' });
     }
- 
-   const decodedToken = jwt.verify(token,process.env.ACCESS_TOKEN_SECRET)
- 
-   const captain = await Captain.findById(decodedToken?._id).select("-password -refreshToken")
-   
-   if(!captain){
-     
-     throw new ApiError(401, "Invalid Access Token")
-   }
- 
-   req.captain = captain;
-   next()
-   } catch (error) {
-    throw new ApiError(401,error?.message || "Invalid Access Token")
-    
-   }
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const response = await axios.get(`${process.env.BASE_URL}/captain/profile`, {
+        headers: {
+            Authorization: `Bearer ${token}`
+        }
+    })
+
+    const captain = response.data;
+
+    if (!captain) {
+        return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    req.captain = captain;
+
+    next();
+
+}
+catch (error) {
+    res.status(500).json({ message: error.message });
+}
 })
