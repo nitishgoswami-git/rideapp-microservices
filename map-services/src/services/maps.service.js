@@ -1,5 +1,6 @@
 import axios from 'axios';
 import {Captain} from '../models/captain.model.js';
+import { subscribeToQueue, publishToQueue } from "../services/rabbitmq.js"
 
 
 export const getAddressCoordinate = async (address) => {
@@ -91,3 +92,21 @@ export const getCaptainsInTheRadius = async (ltd, lng, radius) => {
 
 
 }
+
+subscribeToQueue("ride.getDistance", async (data) => {
+    try {
+        console.log("inside subs dist")
+        const rideData = JSON.parse(data);
+        const { pickup, destination } = rideData;
+
+        // Get distance and duration using Google Maps API
+        const distanceTime = await getDistanceTime(pickup, destination);
+
+        // Publish the result back to another queue
+        publishToQueue("ride.getDistanceReady", JSON.stringify(distanceTime));
+        console.log('after pubs ready')
+    } catch (error) {
+        console.error("Failed to process getDistance:", error.message);
+        // Optionally: publish an error response to another queue
+    }
+});
