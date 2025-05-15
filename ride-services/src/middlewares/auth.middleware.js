@@ -1,21 +1,25 @@
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import jwt from "jsonwebtoken"
+import axios from "axios"
 
 
-export const verifyUser = asyncHandler(async(req, _ ,next) =>{
+export const verifyUser = asyncHandler(async(req, res ,next) =>{
   try {
+    console.log("rideservice")
     const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
     if (!token) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
+    console.log("rideservice2")
 
-    const response = await axios.get(`${process.env.BASE_URL}/user/profile`, {
+    const response = await axios.get(`${process.env.BASE_URL}/users/getUserProfile`, {
         headers: {
             Authorization: `Bearer ${token}`
         }
     })
+    console.log("rideservice3")
 
     const user = response.data;
 
@@ -39,7 +43,7 @@ export const verifyCaptain = asyncHandler( async(req,_,next) =>{
     if (!token) {
         return res.status(401).json({ message: 'Unauthorized' });
     }
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
     const response = await axios.get(`${process.env.BASE_URL}/captain/profile`, {
         headers: {

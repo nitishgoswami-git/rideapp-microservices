@@ -1,13 +1,35 @@
 import { Ride } from '../models/ride.model.js';
-import { getDistanceTime } from './maps.service.js';
 import crypto from 'crypto';
+import { subscribeToQueue, publishToQueue } from '../services/rabbitmq.js';
+
 
 export const getFare = async (pickup, destination) => {
     if (!pickup || !destination) {
         throw new Error('Pickup and destination are required');
     }
-
-    const distanceTime = await getDistanceTime(pickup, destination);
+    const distanceTime = await new Promise((resolve, reject) => {
+        console.log("before subs ready")
+        // Subscribe to the response queue
+        subscribeToQueue("ride.getDistanceReady", (data) => {
+          try {
+            const parsedData = JSON.parse(data);
+            console.log('before resolve')
+            resolve(parsedData);
+          } catch (err) {
+            reject(new Error("Failed to parse distance data"));
+          }
+        });
+    
+        // Publish the request after subscribing to avoid race conditions
+        console.log("before pubs dist")
+    publishToQueue(
+          "ride.getDistance",
+          JSON.stringify({ pickup, destination })
+        );
+    
+        // Optional: add a timeout to reject if no response is received
+        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
+      });
 
     const baseFare = { auto: 30, car: 50, moto: 20 };
     const perKmRate = { auto: 10, car: 15, moto: 8 };
