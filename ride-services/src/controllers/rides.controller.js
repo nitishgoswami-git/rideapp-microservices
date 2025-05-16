@@ -15,28 +15,46 @@ const createRide = asyncHandler(async (req, res) => {
 
     const { pickup, destination, vehicleType } = req.body;
 
-    const ride = await rideService.createRide({
+    const newRide = await rideService.createRide({
         user: req.user._id,
         pickup,
         destination,
         vehicleType
     });
-
-    const pickupCoordinates = await getAddressCoordinate(pickup);
-    const captains = await getCaptainsInTheRadius(pickupCoordinates.ltd, pickupCoordinates.lng, 2);
-
-    const rideWithUser = await Ride.findById(ride._id).populate('user');
-    rideWithUser.otp = undefined; // strip OTP for broadcast
-
-    captains.forEach(captain => {
-        sendMessageToSocketId(captain.socketId, {
-            event: 'new-ride',
-            data: rideWithUser
-        });
+    const pickupCoordinates = await new Promise((resolve,reject) => {
+        subscribeToQueue("ride.create", (data) =>{
+            try{
+                const parsedData = JSON.parse(data);
+                resolve(parsedData);
+            }catch(err){
+                reject(new ApiError())
+            }
+        })
+        publishToQueue("ride.getCoordinate", JSON.stringify({pickup})
+        )
+        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
     });
+
+    const captains = await new Promise((resolve,reject) => {
+        subscribeToQueue("ride.getCaptain.response", (data) =>{
+            try{
+                const parsedData = JSON.parse(data);
+                resolve(parsedData);
+            }catch(err){
+                reject(new ApiError())
+            }
+        })
+        publishToQueue("ride.getCaptain", JSON.stringify({ltd :pickupCoordinates.ltd, lng: pickupCoordinates.lng})
+        )
+        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
+    })
+
+
+
 
     return res.status(201).json(new ApiResponse(201, ride, "Ride created successfully"));
 });
+
 
 const getFare = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
