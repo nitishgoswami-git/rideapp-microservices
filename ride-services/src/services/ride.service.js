@@ -1,60 +1,78 @@
 import { Ride } from '../models/ride.model.js';
 import crypto from 'crypto';
-import { subscribeToQueue, publishToQueue } from '../services/rabbitmq.js';
+import { publishToQueue, subscribeToQueue} from "../services/rabbitmq.js"
 
+import { v4 as uuidv4 } from 'uuid';
+
+const pendingDistanceRequests = new Map();
+
+// Setup single subscriber at module load
+subscribeToQueue("ride.getDistanceReady", (data) => {
+    try {
+        const response = JSON.parse(data);
+        const { requestId, distanceData } = response;
+
+        if (pendingDistanceRequests.has(requestId)) {
+            pendingDistanceRequests.get(requestId)(distanceData);
+            pendingDistanceRequests.delete(requestId);
+        }
+    } catch (error) {
+        console.error("Error handling ride.getDistanceReady:", error);
+    }
+});
 
 export const getFare = async (pickup, destination) => {
     if (!pickup || !destination) {
         throw new Error('Pickup and destination are required');
     }
-    const distanceTime = await new Promise((resolve, reject) => {
-        console.log("before subs ready")
-        // Subscribe to the response queue
-        subscribeToQueue("ride.getDistanceReady", (data) => {
-          try {
-            const parsedData = JSON.parse(data);
-            console.log('before resolve')
-            resolve(parsedData);
-          } catch (err) {
-            reject(new Error("Failed to parse distance data"));
-          }
-        });
-    
-        // Publish the request after subscribing to avoid race conditions
-        console.log("before pubs dist")
-    publishToQueue(
-          "ride.getDistance",
-          JSON.stringify({ pickup, destination })
+
+    return new Promise((resolve, reject) => {
+        const requestId = uuidv4();
+
+        // Store resolver
+        pendingDistanceRequests.set(requestId, resolve);
+
+        // Publish with requestId
+        publishToQueue(
+            "ride.getDistance",
+            JSON.stringify({ pickup, destination, requestId })
         );
-    
-        // Optional: add a timeout to reject if no response is received
-        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
-      });
 
-    const baseFare = { auto: 30, car: 50, moto: 20 };
-    const perKmRate = { auto: 10, car: 15, moto: 8 };
-    const perMinuteRate = { auto: 2, car: 3, moto: 1.5 };
+        // Timeout if no response
+        setTimeout(() => {
+            if (pendingDistanceRequests.has(requestId)) {
+                pendingDistanceRequests.delete(requestId);
+                reject(new Error("Timeout waiting for distance data"));
+            }
+        }, 10000);
+    })
+    .then(distanceTime => {
+        // Calculate fare here like before
+        const baseFare = { auto: 30, car: 50, moto: 20 };
+        const perKmRate = { auto: 10, car: 15, moto: 8 };
+        const perMinuteRate = { auto: 2, car: 3, moto: 1.5 };
 
-    const fare = {
-        auto: Math.round(
-            baseFare.auto +
-            (distanceTime.distance.value / 1000) * perKmRate.auto +
-            (distanceTime.duration.value / 60) * perMinuteRate.auto
-        ),
-        car: Math.round(
-            baseFare.car +
-            (distanceTime.distance.value / 1000) * perKmRate.car +
-            (distanceTime.duration.value / 60) * perMinuteRate.car
-        ),
-        moto: Math.round(
-            baseFare.moto +
-            (distanceTime.distance.value / 1000) * perKmRate.moto +
-            (distanceTime.duration.value / 60) * perMinuteRate.moto
-        )
-    };
-
-    return fare;
+        const fare = {
+            auto: Math.round(
+                baseFare.auto +
+                (distanceTime.distance.value / 1000) * perKmRate.auto +
+                (distanceTime.duration.value / 60) * perMinuteRate.auto
+            ),
+            car: Math.round(
+                baseFare.car +
+                (distanceTime.distance.value / 1000) * perKmRate.car +
+                (distanceTime.duration.value / 60) * perMinuteRate.car
+            ),
+            moto: Math.round(
+                baseFare.moto +
+                (distanceTime.distance.value / 1000) * perKmRate.moto +
+                (distanceTime.duration.value / 60) * perMinuteRate.moto
+            )
+        };
+        return fare;
+    });
 };
+
 
 const getOtp = (num) => {
     return crypto.randomInt(Math.pow(10, num - 1), Math.pow(10, num)).toString();
@@ -66,6 +84,7 @@ export const createRide = async ({ user, pickup, destination, vehicleType }) => 
     }
 
     const fare = await getFare(pickup, destination);
+    console.log(fare)
 
     const ride = await Ride.create({
         user,
@@ -75,7 +94,7 @@ export const createRide = async ({ user, pickup, destination, vehicleType }) => 
         fare: fare[vehicleType]
     });
 
-    return ride;
+    return ride;   
 };
 
 export const confirmRide = async ({ rideId, captain }) => {
