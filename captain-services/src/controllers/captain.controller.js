@@ -2,6 +2,10 @@ import {Captain} from '../models/captain.model.js';
 import { ApiError } from '../utils/ApiError.js';
 import {ApiResponse} from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
+import { publishToQueue, subscribeToQueue} from "../services/rabbitmq.js"
+
+const pendingRequests = [];
+
 
 const generateTokens = async (captainId) => {
     try {
@@ -33,9 +37,8 @@ const registerCaptain = asyncHandler(async (req, res) => {
 
     // Check if all fields are provided
     if (
-        [fullname?.firstname, fullname?.lastname, email, password, vehicle?.color, vehicle?.plate, vehicle?.capacity, vehicle?.vehicleType].some(
-            (field) => !field || field.trim() === ""
-        )
+        [fullname?.firstname, fullname?.lastname, email, password, vehicle?.color, vehicle?.plate, vehicle?.capacity, vehicle?.vehicleType].some((field) => 
+        !field || field == "")
     ) {
         throw new ApiError(400, "All Fields are required");
     }
@@ -158,5 +161,30 @@ const LogoutCaptain = asyncHandler(async (req, res) => {
         );
 });
 
+const waitForNewRide = asyncHandler(async (req, res) => {
+    // Set timeout for long polling (e.g., 30 seconds)
+    req.setTimeout(30000, () => {
+        res.send(json({data : "End"}))
+        res.status(204).end(); // No Content
+    });
 
-export {registerCaptain, LoginCaptain, getCaptainProfile, LogoutCaptain}
+    // Add the response object to the pendingRequests array
+    pendingRequests.push(res);
+});
+
+subscribeToQueue("ride.create", (data) => {
+    const rideData = JSON.parse(data);
+    console.log(rideData)
+    console.log("before calling pendingRequest")
+
+    // Send the new ride data to all pending requests
+    pendingRequests.forEach(res => {
+        console.log("res data")
+        console.log(res)
+        res.json(rideData);
+    });
+
+    // Clear the pending requests
+    pendingRequests.length = 0;
+});
+export {registerCaptain, LoginCaptain, getCaptainProfile, LogoutCaptain,waitForNewRide}
