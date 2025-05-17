@@ -43,8 +43,11 @@ export const getDistanceTime = async (origin, destination) => {
                 throw new Error('No routes found');
             }
 
+
+
             return response.data.rows[ 0 ].elements[ 0 ];
-        } else {
+        } 
+        else {
             throw new Error('Unable to fetch distance and time');
         }
 
@@ -75,7 +78,7 @@ export const getAutoCompleteSuggestions = async (input) => {
     }
 }
 
-export const getCaptainsInTheRadius = async (ltd, lng, radius) => {
+export const getCaptainsInTheRadius = async (ltd, lng, radius=2) => {
 
     // radius in km
 
@@ -95,18 +98,52 @@ export const getCaptainsInTheRadius = async (ltd, lng, radius) => {
 
 subscribeToQueue("ride.getDistance", async (data) => {
     try {
-        console.log("inside subs dist")
         const rideData = JSON.parse(data);
-        const { pickup, destination } = rideData;
+        const { pickup, destination, requestId } = rideData;
 
-        // Get distance and duration using Google Maps API
         const distanceTime = await getDistanceTime(pickup, destination);
 
-        // Publish the result back to another queue
-        publishToQueue("ride.getDistanceReady", JSON.stringify(distanceTime));
-        console.log('after pubs ready')
+        publishToQueue("ride.getDistanceReady", JSON.stringify({ requestId, distanceData: distanceTime }));
     } catch (error) {
         console.error("Failed to process getDistance:", error.message);
-        // Optionally: publish an error response to another queue
     }
 });
+
+
+
+// subscribeToQueue("ride.getCoordinate", async (data) => {
+//     try {
+//         // console.log("inside subs dist")
+//         const rideaddressData = JSON.parse(data);
+//         const { pickup } = rideaddressData;
+
+//         // Get distance and duration using Google Maps API
+//         const addressCoordinates = await getAddressCoordinate(pickup);
+
+//         // Publish the result back to another queue
+//         publishToQueue("ride.new", JSON.stringify(addressCoordinates));
+//         console.log('after coor pubs ready')
+//     } catch (error) {
+//         console.error("Failed to process getDistance:", error.message);
+//         // Optionally: publish an error response to another queue
+//     }
+// });
+
+
+// subscribeToQueue("ride.getCaptain", async (data) => {
+//     try {
+//         // console.log("inside subs dist")
+//         const addressCoordinates = JSON.parse(data);
+//         const { ltd, lng } = addressCoordinates;
+
+//         // Get distance and duration using Google Maps API
+//         const captainsNear = await getCaptainsInTheRadius(ltd, lng);
+
+//         // Publish the result back to another queue
+//         publishToQueue("ride.getCaptain.response", JSON.stringify(captainsNear));
+//         console.log('after pubs ready')
+//     } catch (error) {
+//         console.error("Failed to process getDistance:", error.message);
+//         // Optionally: publish an error response to another queue
+//     }
+// });
