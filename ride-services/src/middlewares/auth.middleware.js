@@ -22,6 +22,8 @@ export const verifyUser = asyncHandler(async(req, res ,next) =>{
     console.log("rideservice3")
 
     const user = response.data;
+    const userId = response.data._id;
+    console.log(user)
 
     if (!user) {
         return res.status(401).json({ message: 'Unauthorized' });
@@ -37,7 +39,7 @@ catch (error) {
 }
 })
 
-export const verifyCaptain = asyncHandler( async(req,_,next) =>{
+export const verifyCaptain = asyncHandler( async(req,res,next) =>{
   try {
     const token = req.cookies.token || req.headers.authorization.split(' ')[ 1 ];
     if (!token) {
@@ -45,7 +47,7 @@ export const verifyCaptain = asyncHandler( async(req,_,next) =>{
     }
     const decoded = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET);
 
-    const response = await axios.get(`${process.env.BASE_URL}/captain/profile`, {
+    const response = await axios.get(`${process.env.BASE_URL}/captain/getCaptainProfile`, {
         headers: {
             Authorization: `Bearer ${token}`
         }
@@ -63,6 +65,6 @@ export const verifyCaptain = asyncHandler( async(req,_,next) =>{
 
 }
 catch (error) {
-    res.status(500).json({ message: error.message });
+    return res.status(500).json({ message: error.message });
 }
 })

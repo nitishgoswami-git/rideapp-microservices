@@ -8,7 +8,6 @@ import {connect} from './services/rabbitmq.js'
 connect();
 
 
-
 connectDB()
   .then(() => {
     app.listen(process.env.PORT || 3000, () => {

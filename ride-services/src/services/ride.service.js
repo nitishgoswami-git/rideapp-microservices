@@ -141,12 +141,12 @@ export const startRide = async ({ rideId, otp, captain }) => {
         throw new Error('Invalid OTP');
     }
 
-    await Ride.findOneAndUpdate(
+    const updatedRide= await Ride.findOneAndUpdate(
         { _id: rideId },
-        { status: 'ongoing' }
+        { status: 'started' },{ new: true }
     );
 
-    return ride;
+    return updatedRide;
 };
 
 export const endRide = async ({ rideId, captain }) => {
@@ -166,14 +166,14 @@ export const endRide = async ({ rideId, captain }) => {
         throw new Error('Ride not found');
     }
 
-    if (ride.status !== 'ongoing') {
+    if (ride.status !== 'started') {
         throw new Error('Ride not ongoing');
     }
 
-    await Ride.findOneAndUpdate(
+    const updatedRide=   await Ride.findOneAndUpdate(
         { _id: rideId },
-        { status: 'completed' }
+        { status: 'completed' },{new:true}
     );
 
-    return ride;
+    return updatedRide;
 };

@@ -21,6 +21,12 @@ const rideSchema = new mongoose.Schema({
         enum: [ 'requested', 'accepted', 'started', 'completed' ],
         default: 'requested'
     },
+    fare : {
+        type: Number
+    },
+    otp:{
+        type: Number
+    }
 }, {
     timestamps: true
 })

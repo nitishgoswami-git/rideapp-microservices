@@ -30,10 +30,10 @@ router.post('/confirm',
     confirmRide
 )
 
-router.get('/start-ride',
+router.post('/start-ride',
     verifyCaptain,
-    query('rideId').isMongoId().withMessage('Invalid ride id'),
-    query('otp').isString().isLength({ min: 6, max: 6 }).withMessage('Invalid OTP'),
+    body('rideId').isMongoId().withMessage('Invalid ride id'),
+    body('otp').isNumeric().isLength({ min: 6, max: 6 }).withMessage('Invalid OTP'),
     startRide
 )
 

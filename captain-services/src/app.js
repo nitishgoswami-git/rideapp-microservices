@@ -30,7 +30,7 @@ import captainRouter from "./routes/captain.routes.js"
 
 //routes declations
 
-app.use("/api/v1/captains",captainRouter)
+app.use("/api/v1/captain",captainRouter)
 
 
 

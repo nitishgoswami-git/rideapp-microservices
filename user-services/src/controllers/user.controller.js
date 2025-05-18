@@ -115,6 +115,8 @@ const LoginUser = asyncHandler( async (req,res) => {
 })
 
 const getUserProfile = asyncHandler(async (req, res) => {
+    console.log("user_services profile route hit")
+
     return res.status(200).json({
         statusCode: 200,
         message: "Current User fetched successfully",

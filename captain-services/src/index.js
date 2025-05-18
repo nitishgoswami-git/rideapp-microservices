@@ -1,9 +1,10 @@
 import dotenv from 'dotenv';
+dotenv.config();
 import {app} from './app.js';
 import connectDB from './db/index.js';
+import {connect} from './services/rabbitmq.js'
 
-dotenv.config();
-
+connect();
 
 connectDB()
   .then(() => {

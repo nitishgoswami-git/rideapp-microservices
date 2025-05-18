@@ -2,10 +2,11 @@ import { validationResult } from 'express-validator';
 import { ApiError } from '../utils/ApiError.js';
 import { ApiResponse } from '../utils/ApiResponse.js';
 import { asyncHandler } from '../utils/asyncHandler.js';
-import { sendMessageToSocketId } from '../socket.js';
-import { getAddressCoordinate, getCaptainsInTheRadius } from '../services/maps.service.js';
+// import { sendMessageToSocketId } from '../socket.js';
+// import { getAddressCoordinate, getCaptainsInTheRadius } from '../services/maps.service.js';
 import * as rideService from '../services/ride.service.js';
 import { Ride } from '../models/ride.model.js';
+import { publishToQueue, subscribeToQueue} from "../services/rabbitmq.js"
 
 const createRide = asyncHandler(async (req, res) => {
     const errors = validationResult(req);
@@ -16,47 +17,49 @@ const createRide = asyncHandler(async (req, res) => {
     const { pickup, destination, vehicleType } = req.body;
 
     const newRide = await rideService.createRide({
-        user: req.user._id,
+        user: req.user.data._id,
         pickup,
         destination,
         vehicleType
     });
-    const pickupCoordinates = await new Promise((resolve,reject) => {
-        subscribeToQueue("ride.create", (data) =>{
-            try{
-                const parsedData = JSON.parse(data);
-                resolve(parsedData);
-            }catch(err){
-                reject(new ApiError())
-            }
-        })
-        publishToQueue("ride.getCoordinate", JSON.stringify({pickup})
-        )
-        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
-    });
+    console.log("before newRide")
+    console.log(newRide)
+    // const pickupCoordinates = await new Promise((resolve,reject) => {
+    //     subscribeToQueue("ride.new", (data) =>{
+    //         try{
+    //             const parsedData = JSON.parse(data);
+    //             resolve(parsedData);
+    //         }catch(err){
+    //             reject(new ApiError())
+    //         }
+    //     })
+    //     publishToQueue("ride.getCoordinate", JSON.stringify({pickup})
+    //     )
+    //     setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
+    // });
 
-    const captains = await new Promise((resolve,reject) => {
-        subscribeToQueue("ride.getCaptain.response", (data) =>{
-            try{
-                const parsedData = JSON.parse(data);
-                resolve(parsedData);
-            }catch(err){
-                reject(new ApiError())
-            }
-        })
-        publishToQueue("ride.getCaptain", JSON.stringify({ltd :pickupCoordinates.ltd, lng: pickupCoordinates.lng})
-        )
-        setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
-    })
+    // const captains = await new Promise((resolve,reject) => {
+    //     subscribeToQueue("ride.getCaptain.response", (data) =>{
+    //         try{
+    //             const parsedData = JSON.parse(data);
+    //             resolve(parsedData);
+    //         }catch(err){
+    //             reject(new ApiError())
+    //         }
+    //     })
+    //     publishToQueue("ride.getCaptain", JSON.stringify({ltd :pickupCoordinates.ltd, lng: pickupCoordinates.lng})
+    //     )
+    //     setTimeout(() => reject(new Error("Timeout waiting for distance data")), 10000);
+    // })
+
+    publishToQueue("ride.create",JSON.stringify({newRide}))
 
 
-
-
-    return res.status(201).json(new ApiResponse(201, ride, "Ride created successfully"));
+    return res.status(201).json(new ApiResponse(201, {data : {newRide}}, "Ride created successfully"));
 });
 
-
 const getFare = asyncHandler(async (req, res) => {
+    console.log("getFare hit")
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         throw new ApiError(400, "Validation failed", errors.array());
@@ -81,10 +84,10 @@ const confirmRide = asyncHandler(async (req, res) => {
         captain: req.captain
     });
 
-    sendMessageToSocketId(ride.user.socketId, {
-        event: 'ride-confirmed',
-        data: ride
-    });
+    // sendMessageToSocketId(ride.user.socketId, {
+    //     event: 'ride-confirmed',
+    //     data: ride
+    // });
 
     return res.status(200).json(new ApiResponse(200, ride, "Ride confirmed successfully"));
 });
@@ -95,7 +98,7 @@ const startRide = asyncHandler(async (req, res) => {
         throw new ApiError(400, "Validation failed", errors.array());
     }
 
-    const { rideId, otp } = req.query;
+    const { rideId, otp } = req.body; // <-- changed from req.query to req.body
 
     const ride = await rideService.startRide({
         rideId,
@@ -103,10 +106,10 @@ const startRide = asyncHandler(async (req, res) => {
         captain: req.captain
     });
 
-    sendMessageToSocketId(ride.user.socketId, {
-        event: 'ride-started',
-        data: ride
-    });
+    // sendMessageToSocketId(ride.user.socketId, {
+    //     event: 'ride-started',
+    //     data: ride
+    // });
 
     return res.status(200).json(new ApiResponse(200, ride, "Ride started successfully"));
 });
@@ -124,10 +127,10 @@ const endRide = asyncHandler(async (req, res) => {
         captain: req.captain
     });
 
-    sendMessageToSocketId(ride.user.socketId, {
-        event: 'ride-ended',
-        data: ride
-    });
+    // sendMessageToSocketId(ride.user.socketId, {
+    //     event: 'ride-ended',
+    //     data: ride
+    // });
 
     return res.status(200).json(new ApiResponse(200, ride, "Ride ended successfully"));
 });

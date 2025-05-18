@@ -1,9 +1,11 @@
 import dotenv from 'dotenv';
-import {app} from './app.js';
-import connectDB from './db/index.js';
-
 dotenv.config();
 
+import {app} from './app.js';
+import connectDB from './db/index.js';
+import {connect} from "./services/rabbitmq.js"
+
+connect();
 
 connectDB()
   .then(() => {
@@ -14,3 +16,4 @@ connectDB()
   .catch((error) => {
     console.error('Error connecting to the database:', error);
   });
+

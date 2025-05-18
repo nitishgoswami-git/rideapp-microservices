@@ -173,18 +173,21 @@ const waitForNewRide = asyncHandler(async (req, res) => {
 });
 
 subscribeToQueue("ride.create", (data) => {
-    const rideData = JSON.parse(data);
-    console.log(rideData)
-    console.log("before calling pendingRequest")
+    let rideData = JSON.parse(data);
+    delete rideData.newRide.otp;
+
+    console.log(rideData);
+    console.log("before calling pendingRequest");
 
     // Send the new ride data to all pending requests
     pendingRequests.forEach(res => {
-        console.log("res data")
-        console.log(res)
+        console.log("res data");
+        console.log(res);
         res.json(rideData);
     });
 
     // Clear the pending requests
     pendingRequests.length = 0;
 });
+
 export {registerCaptain, LoginCaptain, getCaptainProfile, LogoutCaptain,waitForNewRide}
